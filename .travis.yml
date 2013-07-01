@@ -4,6 +4,14 @@ jdk:
   - openjdk6
   - oraclejdk7
 # before_script: cd core
+
+#branches:
+#  only:
+#    - master
+
 notifications:
   email:
     - peathal@yahoo.de
+
+after_success:
+  - mvn -Pcobertura clean cobertura:cobertura org.eluder.coveralls:coveralls-maven-plugin:cobertura  

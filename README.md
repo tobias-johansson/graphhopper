@@ -1,4 +1,6 @@
-# GraphHopper [![Build Status](https://secure.travis-ci.org/graphhopper/graphhopper.png?branch=master)](http://travis-ci.org/graphhopper/graphhopper)
+# GraphHopper 
+[![Build Status](https://secure.travis-ci.org/graphhopper/graphhopper.png?branch=master)](http://travis-ci.org/graphhopper/graphhopper)
+[![Coverage Status](https://coveralls.io/repos/graphhopper/graphhopper/badge.png?branch=master)](https://coveralls.io/r/graphhopper/graphhopper?branch=master)
 
 GraphHopper is a fast and memory efficient Java road routing engine released under Apache License 2.0.
 It is tuned towards road networks (via OpenStreetMap) but can be useful for public transport problems as well.
