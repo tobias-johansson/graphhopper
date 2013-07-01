@@ -13,10 +13,10 @@ notifications:
   email:
     - peathal@yahoo.de
 
-script: mvn clean install
+script: cd core; mvn -Pjacoco test jacoco:report coveralls:jacoco
 
-before_install:
-  - git submodule update --init --recursive
-
-after_success:
-  - mvn -Pcobertura clean cobertura:cobertura org.eluder.coveralls:coveralls-maven-plugin:cobertura  
+#script: mvn clean install
+#before_install:
+#  - git submodule update --init --recursive
+#after_success:
+#  - mvn -Pcobertura clean cobertura:cobertura org.eluder.coveralls:coveralls-maven-plugin:cobertura  
