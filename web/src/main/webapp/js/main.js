@@ -8,7 +8,7 @@ var nominatim_reverse = "http://nominatim.openstreetmap.org/reverse";
 var routingLayer;
 var map;
 var browserTitle = "GraphHopper Maps";
-var clickToRoute;
+var firstClickToRoute;
 var iconTo = L.icon({
     iconUrl: './img/marker-to.png', 
     iconAnchor: [10, 16]
@@ -45,7 +45,7 @@ $(document).ready(function(e) {
             if (onloadPop) return;
             var state = History.getState();
             console.log(state);            
-//             initFromParams(parseUrl(state.url), true);
+            //             initFromParams(parseUrl(state.url), true);
             initFromParams(state.data, true);
         });
     }
@@ -158,6 +158,16 @@ function initMap() {
         subdomains: ['otile1','otile2','otile3','otile4']
     });
     
+    var mapquestAerial = L.tileLayer('http://{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.png', {
+        attribution: '<a href="http://open.mapquest.co.uk">MapQuest</a>,' + moreAttr, 
+        subdomains: ['otile1','otile2','otile3','otile4']
+    });
+    
+    //    var mapbox = L.tileLayer('http://a.tiles.mapbox.com/v3/mapbox.world-bright/{z}/{x}/{y}.png', {
+    //        attribution: '<a href="http://www.mapbox.com">MapBox</a>,' + moreAttr, 
+    //        subdomains: ['a','b','c']
+    //    });    
+    
     var wrk = L.tileLayer('http://{s}.wanderreitkarte.de/topo/{z}/{x}/{y}.png', {
         attribution: '<a href="http://wanderreitkarte.de">WanderReitKarte</a>,' + moreAttr, 
         subdomains: ['topo4','topo','topo2','topo3']
@@ -183,15 +193,23 @@ function initMap() {
     });
     
     var baseMaps = {
-        "MapQuest": mapquest,
+        "MapQuest": mapquest,        
+        "MapQuest Aerial": mapquestAerial,
+        //        "MapBox": mapbox,
         "WanderReitKarte": wrk,
         "Cloudmade": cloudmade,
         "OpenStreetMap": osm,
         "OpenStreetMap.de": osmde
     };
+    
+    //    var overlays = {
+    //        "MapQuest Hybrid": mapquest
+    //    };
+    
     // no layers for small browser windows
-    if($(window).width() > 400)
-        L.control.layers(baseMaps).addTo(map);
+    if($(window).width() > 400) {
+        L.control.layers(baseMaps/*, overlays*/).addTo(map);
+    }
     
     L.control.scale().addTo(map);
 
@@ -224,13 +242,13 @@ function initMap() {
         }).addTo(map); 
     
     routingLayer = L.geoJson().addTo(map);    
-    clickToRoute = true;
+    firstClickToRoute = true;
     function onMapClick(e) {       
         var latlng = e.latlng;
-        if(clickToRoute) {
+        if(firstClickToRoute) {
             // set start point
             routingLayer.clearLayers();
-            clickToRoute = false;
+            firstClickToRoute = false;
             ghRequest.from.setCoord(latlng.lat, latlng.lng);
             resolveFrom();            
         } else {
@@ -249,7 +267,7 @@ function setFlag(latlng, isFrom) {
     if(latlng.lat) {
         var marker = L.marker([latlng.lat, latlng.lng], {
             icon: (isFrom? iconFrom : iconTo),
-            draggable: true            
+            draggable: true
         }).addTo(routingLayer).bindPopup(isFrom? "Start" : "End");                  
         marker.on('dragend', function(e) {
             routingLayer.clearLayers();
@@ -262,8 +280,9 @@ function setFlag(latlng, isFrom) {
                 ghRequest.to.setCoord(latlng.lat, latlng.lng);
                 resolveTo();
             }
-            // do not wait for resolving
-            routeLatLng(ghRequest);
+            // do not wait for resolving and avoid zooming when dragging
+            ghRequest.doZoom = false;
+            routeLatLng(ghRequest, false);
         });
     } 
 }
@@ -394,6 +413,10 @@ function focus(coord) {
     }
 }
 function routeLatLng(request, doQuery) {
+    // doZoom should not show up in the URL but in the request object to avoid zooming for history change
+    var doZoom = request.doZoom;
+    request.doZoom = true;
+        
     var urlForHistory = request.createFullURL();
     // not enabled e.g. if no cookies allowed (?)
     // if disabled we have to do the query and cannot rely on the statechange history event    
@@ -401,9 +424,11 @@ function routeLatLng(request, doQuery) {
         // 2. important workaround for encoding problems in history.js
         var params = parseUrl(urlForHistory);
         console.log(params);
+        params.doZoom = doZoom;
         History.pushState(params, browserTitle, urlForHistory);
         return;
-    }
+    }    
+
     // BUT if this is the very first query and no history support skip the query
     if(!History.enabled && !everPushedSomething) {
         return;
@@ -449,7 +474,7 @@ function routeLatLng(request, doQuery) {
         };
         
         routingLayer.addData(geojsonFeature);        
-        if(json.route.bbox) {
+        if(json.route.bbox && doZoom) {
             var minLon = json.route.bbox[0];
             var minLat = json.route.bbox[1];
             var maxLon = json.route.bbox[2];
@@ -520,7 +545,7 @@ function routeLatLng(request, doQuery) {
         $('.defaulting').each(function(index, element) {
             $(element).css("color", "black");
         });
-        
+               
         if(json.route.instructions) {
             var instructionsElement = $("<table id='instructions'><colgroup>"
                 + "<col width='10%'><col width='65%'><col width='25%'></colgroup>");
@@ -556,8 +581,8 @@ function routeLatLng(request, doQuery) {
     });
 }
 
-function addInstruction(main, indi, title, distance) {
-    var indiPic = "<img class='instr_pic' src='/img/" + indi + ".png'/>";                    
+function addInstruction(main, indi, title, distance) {    
+    var indiPic = "<img class='instr_pic' src='" + window.location.pathname + "img/" + indi + ".png'/>";                    
     var str = "<td class='instr_title'>"  + title + "</td>"
     + " <td class='instr_distance_td'><span class='instr_distance'>" + distance + "</span></td>";
     if(indi !== "continue")

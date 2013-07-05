@@ -55,18 +55,46 @@ public class CarFlagEncoderTest
         map.put("ford", "yes");
         assertFalse(encoder.isAllowed(way) > 0);
         map.put("motorcar", "yes");
-        assertTrue(encoder.isAllowed(way) > 0);               
+        assertTrue(encoder.isAllowed(way) > 0);
     }
-    
+
     @Test
-    public void testSpeedLimitBiggerThanDefaultRoadSpeed() {
+    public void testSpeedLimitBiggerThanMaxValue()
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        OSMWay way = new OSMWay(1, map);
+        map.put("highway", "trunk");
+        map.put("maxspeed", "500");
+        int allowed = encoder.isAllowed(way);
+        int encoded = encoder.handleWayTags(allowed, way);
+        assertEquals(100, encoder.getSpeed(encoded));
+    }
+
+    @Test
+    public void testSpeedLimitBiggerThanDefaultRoadSpeed()
+    {
         Map<String, String> map = new HashMap<String, String>();
         OSMWay way = new OSMWay(1, map);
         map.put("highway", "trunk");
         map.put("maxspeed", "110");
         int allowed = encoder.isAllowed(way);
         int encoded = encoder.handleWayTags(allowed, way);
-        assertEquals(110, encoder.getSpeed(encoded));
+        assertEquals(95, encoder.getSpeed(encoded));
+    }
+
+    @Test
+    public void testNoRailway()
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        OSMWay way = new OSMWay(1, map);
+        map.put("highway", "service");
+        map.put("railway", "rail");
+        assertEquals(0, encoder.isAllowed(way));
+        
+        way = new OSMWay(1, map);
+        map.put("highway", "service");
+        map.put("railway", "level_crossing");
+        assertNotSame(0, encoder.isAllowed(way));
     }
 
     @Test
